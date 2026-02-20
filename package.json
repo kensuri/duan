@@ -9,19 +9,36 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "next": "16.1.1",
+    "@auth/prisma-adapter": "^2.11.1",
+    "@nextui-org/react": "^2.6.11",
+    "@prisma/client": "^6.19.1",
+    "autoprefixer": "^10.4.23",
+    "bcryptjs": "^3.0.3",
+    "docx-templates": "^4.15.0",
+    "docxtemplater": "^3.67.6",
+    "file-saver": "^2.0.5",
+    "framer-motion": "^12.23.26",
+    "lucide-react": "^0.562.0",
+    "next": "^16.1.6",
+    "next-auth": "^4.24.13",
+    "pizzip": "^3.2.0",
+    "postcss": "^8.5.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "sonner": "^2.0.7",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/file-saver": "^2.0.7",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
-    "tailwindcss": "^4",
+    "prisma": "^6.19.1",
+    "tailwindcss": "^3.4.19",
     "typescript": "^5"
   }
 }

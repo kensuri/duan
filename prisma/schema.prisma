@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Template {
+  id        String   @id @default(cuid())
+  name      String
+  fileName  String
+  filePath  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String?  @unique
+  password  String?
+  image     String?
+  createdAt DateTime @default(now())
+}
+
+model dulieuduan {
+  id                                          String    @id @default(cuid())
+  createdAt                                   DateTime  @default(now())
+  updatedAt                                   DateTime	@updatedAt
+  ten_du_an_du_toan_mua_sam                   String?
+  ten_goi_thau                                String?
+  so_tt_bcdx_chu_truong                       String?
+  ngay_chu_truong                             DateTime?
+  don_vi_bao_gia_1                            String?
+  gia_bao_gia_sau_thue_1                      Float?
+  don_vi_bao_gia_2                            String?
+  gia_bao_gia_sau_thue_2                      Float?
+  don_vi_bao_gia_3                            String?
+  gia_bao_gia_sau_thue_3                      Float?
+  gia_trung_binh_bao_gia                      Float?
+  don_vi_trinh_chu_truong                     String?
+  cap_co_tham_quyen                           String?
+  nguoi_co_tham_quyen                         String?
+  du_toan_goi_thau_truoc_thue                 Float?
+  phan_tram_thue                              Float?
+  tien_thue_du_toan                           Float?
+  tien_du_toan_goi_thau_sau_thue              Float?
+  bang_chu_du_toan_sau_thue                   String?
+  nguon_von                                   String?
+  bang_quy_mo                                 Json?     @default("{\"rows\": [], \"columns\": []}")
+  so_tt_khclnt                                String?
+  ngay_tt_khlcnt                              DateTime?
+  chu_dau_tu                                  String?
+  don_vi_trinh_chu_dau_tu                     String?
+  thoi_gian_thuc_hien                         String?
+  dia_diem_thuc_hien                          String?
+  nam_tai_chinh                               String?
+  hinh_thuc_lua_chon_nha_thau                 String?
+  phuong_thuc_lua_chon_nha_thau               String?
+  thoi_gian_to_chuc_lua_chon_nha_thau         String?
+  thoi_gian_bat_dau_to_chuc_lua_chon_nha_thau String?
+  loai_hop_dong                               String?
+  thoi_gian_thuc_hien_goi_thau                String?
+  tuy_chon_mua_them                           String?
+  so_qd_khclnt                                String?
+  ngay_qd_khlcnt                              DateTime?
+  ngay_dang_tai_khlcnt                        DateTime?
+  ma_khlcnt                                   String?
+  so_etbmt                                    String?
+  gia_tri_bao_lanh_du_thau                    Float?
+  ngay_thong_bao_moi_thau                     DateTime?
+  ngay_dong_thau                              DateTime?
+  ngay_hoan_thien_hop_dong                    DateTime?
+  so_van_ban_phe_duyet_ket_qua                String?
+  ngay_van_ban_phe_duyet_ket_qua              DateTime?
+  so_hop_dong                                 String?
+  ngay_hop_dong                               DateTime?
+  dai_dien_chu_dau_tu                         String?
+  chuc_vu_dai_dien_chu_dau_tu                 String?
+  dia_chi_chu_dau_tu                          String?
+  ma_so_thue_chu_dau_tu                       String?
+  cq_quan_ly_thue_chu_dau_tu                  String?
+  ma_qhns_chu_dau_tu                          String?
+  dien_thoai_chu_dau_tu                       String?
+  tai_khoan_chu_dau_tu                        String?
+  uy_quyen_chu_dau_tu                         String?
+  nha_thau                                    String?
+  dai_dien_nha_thau                           String?
+  chuc_vu_dai_dien_nha_thau                   String?
+  dia_chi_nha_thau                            String?
+  ma_so_thue_nha_thau                         String?
+  cq_quan_ly_thue_nha_thau                    String?
+  dien_thoai_nha_thau                         String?
+  tai_khoan_nha_thau                          String?
+  uy_quyen_nha_thau                           String?
+  gia_tri_hop_dong_truoc_thue                 Float?
+  gia_tri_thue_hop_dong                       Float?
+  gia_tri_hop_dong_sau_thue                   Float?
+  bang_chu_hop_dong_sau_thue                  String?
+  bang_hop_dong                               Json?     @default("{\"rows\": [], \"columns\": []}")
+  gia_tri_bao_lanh_hop_dong                   Float?
+  gia_tri_tam_ung_hop_dong                    Float?
+  ngay_nghiem_thu_ban_giao                    DateTime?
+  ngay_thanh_ly_hop_dong                      DateTime?
+}
+
+model donvi {
+  id                   String   @id @default(cuid())
+  ten_don_vi           String   // Tên công ty (Bắt buộc)
+  dia_chi              String?
+  dai_dien             String?
+  chuc_vu              String?
+  ma_so_thue           String?
+  dien_thoai           String?
+  fax                  String?
+  ma_qhns              String?
+  cq_quan_ly_thue      String?
+  so_tai_khoan         String?
+  ngan_hang            String?
+  uy_quyen             String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
