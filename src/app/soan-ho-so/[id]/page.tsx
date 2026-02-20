@@ -136,7 +136,6 @@ export default function SoanHoSoPage({ params }: { params: Promise<{ id: string 
   const handleExportWord = async () => {
     if (!selectedTemplate || !project) return;
     try {
-      // const response = await fetch(`/templates/${selectedTemplate.file}`);
       const fileUrl = selectedTemplate.url || `/templates/${selectedTemplate.file}`;
       const response = await fetch(fileUrl);
       const arrayBuffer = await response.arrayBuffer();
@@ -148,30 +147,44 @@ export default function SoanHoSoPage({ params }: { params: Promise<{ id: string 
         nullGetter() { return ""; } 
       });
 
+      // --- PHẦN SỬA ĐỔI CHÍNH Ở ĐÂY ---
       const dataToRender: any = {};
       
-      // XỬ LÝ DỮ LIỆU ĐƠN (Ngày tháng & Số tiền)
-      Object.keys(project).forEach(key => {
-        const val = project[key];
-        
-        // 1. XỬ LÝ NGÀY THÁNG dd/mm/yyyy
-        if (key.startsWith('ngay_') && val) {
+      // 1. Lấy danh sách tất cả các biến có trong file Word (kể cả biến HOA)
+      // Điều này giúp ta biết template đang cần {CAP_CO_THAM_QUYEN} hay {cap_co_tham_quyen}
+      requiredFields.forEach(tag => {
+        const lowerTag = tag.toLowerCase();
+        let val = project[lowerTag] ?? ""; // Tìm dữ liệu trong project (thường lưu chữ thường)
+
+        // A. XỬ LÝ NGÀY THÁNG
+        if (lowerTag.startsWith('ngay_') && val) {
           const date = new Date(val);
           if (!isNaN(date.getTime())) {
             const d = String(date.getDate()).padStart(2, '0');
             const m = String(date.getMonth() + 1).padStart(2, '0');
             const y = date.getFullYear();
-            dataToRender[key] = `${d}/${m}/${y}`;
-          } else { dataToRender[key] = val; }
+            val = `${d}/${m}/${y}`;
+          }
         } 
-        // 2. XỬ LÝ SỐ TIỀN ###.###.###
-        else if ((key.includes('gia_') || key.includes('tien_') || key.includes('du_toan_')) && 
-                 !key.includes('bang_chu_') && val !== null && val !== "") {
-          dataToRender[key] = formatMoney(val);
+        // B. XỬ LÝ SỐ TIỀN
+        else if ((lowerTag.includes('gia_') || lowerTag.includes('tien_') || lowerTag.includes('du_toan_')) && 
+                 !lowerTag.includes('bang_chu_') && val !== "") {
+          val = formatMoney(val);
         }
-        // 3. TRƯỜNG KHÁC
-        else {
-          dataToRender[key] = val === null ? "" : val;
+
+        // C. XỬ LÝ VIẾT HOA: Nếu tag trong Word là HOA TOÀN BỘ -> Ép giá trị thành HOA
+        if (tag === tag.toUpperCase() && typeof val === 'string') {
+          dataToRender[tag] = val.toUpperCase();
+        } else {
+          dataToRender[tag] = val;
+        }
+      });
+
+      // 2. ĐẢM BẢO CÁC BIẾN CỐ ĐỊNH LUÔN CÓ DỮ LIỆU (Tránh lỗi không hiện)
+      const specialFields = ['ten_du_an_du_toan_mua_sam', 'don_vi_bao_gia_1', 'don_vi_bao_gia_2', 'don_vi_bao_gia_3'];
+      specialFields.forEach(f => {
+        if (!dataToRender[f] && project[f]) {
+           dataToRender[f] = project[f];
         }
       });
 
