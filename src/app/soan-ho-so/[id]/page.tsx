@@ -147,14 +147,18 @@ export default function SoanHoSoPage({ params }: { params: Promise<{ id: string 
         nullGetter() { return ""; } 
       });
 
-      // --- PHẦN SỬA ĐỔI CHÍNH Ở ĐÂY ---
       const dataToRender: any = {};
       
-      // 1. Lấy danh sách tất cả các biến có trong file Word (kể cả biến HOA)
-      // Điều này giúp ta biết template đang cần {CAP_CO_THAM_QUYEN} hay {cap_co_tham_quyen}
+      // Bước 1: Duyệt qua TẤT CẢ các tag thực tế tìm thấy trong file Word (Bao gồm cả viết HOA)
+      // Việc này giúp xử lý triệt để {TEN_VIET_HOA} và các biến dài
       requiredFields.forEach(tag => {
-        const lowerTag = tag.toLowerCase();
-        let val = project[lowerTag] ?? ""; // Tìm dữ liệu trong project (thường lưu chữ thường)
+        const lowerTag = tag.toLowerCase().trim();
+        let val = project[lowerTag];
+
+        // Xử lý các trường hợp đặc biệt bị sai giá trị hoặc thiếu
+        if (lowerTag === 'don_vi_bao_gia_2') val = project.don_vi_bao_gia_2;
+        if (lowerTag === 'thoi_gian_to_chuc_lua_chon_nha_thau') val = project.thoi_gian_to_chuc_lua_chon_nha_thau;
+        if (lowerTag === 'thoi_gian_bat_dau_to_chuc_lua_chon_nha_thau') val = project.thoi_gian_bat_dau_to_chuc_lua_chon_nha_thau;
 
         // A. XỬ LÝ NGÀY THÁNG
         if (lowerTag.startsWith('ngay_') && val) {
@@ -168,56 +172,37 @@ export default function SoanHoSoPage({ params }: { params: Promise<{ id: string 
         } 
         // B. XỬ LÝ SỐ TIỀN
         else if ((lowerTag.includes('gia_') || lowerTag.includes('tien_') || lowerTag.includes('du_toan_')) && 
-                 !lowerTag.includes('bang_chu_') && val !== "") {
+                 !lowerTag.includes('bang_chu_') && val !== null && val !== "") {
           val = formatMoney(val);
         }
 
-        // C. XỬ LÝ VIẾT HOA: Nếu tag trong Word là HOA TOÀN BỘ -> Ép giá trị thành HOA
+        // C. XỬ LÝ VIẾT HOA THEO YÊU CẦU
+        // Nếu tag trong Word là HOA TOÀN BỘ -> Xuất giá trị HOA
         if (tag === tag.toUpperCase() && typeof val === 'string') {
           dataToRender[tag] = val.toUpperCase();
         } else {
-          dataToRender[tag] = val;
+          dataToRender[tag] = val ?? "";
         }
       });
 
-      // 2. ĐẢM BẢO CÁC BIẾN CỐ ĐỊNH LUÔN CÓ DỮ LIỆU (Tránh lỗi không hiện)
-      const specialFields = ['ten_du_an_du_toan_mua_sam', 'don_vi_bao_gia_1', 'don_vi_bao_gia_2', 'don_vi_bao_gia_3'];
-      specialFields.forEach(f => {
-        if (!dataToRender[f] && project[f]) {
-           dataToRender[f] = project[f];
-        }
-      });
-
-      // XỬ LÝ DỮ LIỆU BẢNG (Tiêu đề & Nội dung)
+      // Bước 2: Xử lý dữ liệu bảng (Giữ nguyên logic bang_quy_mo và bang_hop_dong của Bản)
       const dynamicTableFields = ['bang_quy_mo', 'bang_hop_dong'];
       dynamicTableFields.forEach(field => {
         const rawValue = project[field];
-        dataToRender[field] = []; 
-
         if (rawValue) {
           try {
             const parsed = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
-            
-            // Map dữ liệu hàng khớp với Template {col_1}...{col_6}
             dataToRender[field] = (parsed.rows || []).map((row: any) => ({
-              col_1: row.col_1 || "",
-              col_2: row.col_2 || "",
-              col_3: row.col_3 || "",
-              col_4: row.col_4 || "",
-              col_5: row.col_5 || "",
-              col_6: row.col_6 || "",
+              col_1: row.col_1 || "", col_2: row.col_2 || "", col_3: row.col_3 || "",
+              col_4: row.col_4 || "", col_5: row.col_5 || "", col_6: row.col_6 || "",
             }));
-
-            // Map TIÊU ĐỀ CỘT: h1-h6 cho bang_quy_mo, g1-g6 cho bang_hop_dong
             const prefix = field === 'bang_quy_mo' ? 'h' : 'g';
             if (parsed.columns) {
               parsed.columns.forEach((col: any, index: number) => {
                 dataToRender[`${prefix}${index + 1}`] = col.label || "";
               });
             }
-          } catch (e) {
-            console.error(`Lỗi parse bảng ${field}:`, e);
-          }
+          } catch (e) { console.error(e); }
         }
       });
 
@@ -226,10 +211,10 @@ export default function SoanHoSoPage({ params }: { params: Promise<{ id: string 
         type: "blob",
         mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });
-      saveAs(out, `${selectedTemplate.name}_${project.ten_du_an_du_toan_mua_sam || 'HoSo'}.docx`);
-    } catch (error: any) {
-      console.error("Lỗi xuất Word:", error);
-      alert("Có lỗi khi tạo file Word! Hãy kiểm tra lại template.");
+      saveAs(out, `${selectedTemplate.name}_Export.docx`);
+    } catch (error) {
+      console.error("Lỗi:", error);
+      alert("Lỗi xuất file! Kiểm tra lại các biến dài trong Word.");
     }
   };
 
