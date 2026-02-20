@@ -147,45 +147,53 @@ export default function SoanHoSoPage({ params }: { params: Promise<{ id: string 
         nullGetter() { return ""; } 
       });
 
-      const dataToRender: any = {};
-      
-      // Bước 1: Duyệt qua TẤT CẢ các tag thực tế tìm thấy trong file Word (Bao gồm cả viết HOA)
-      // Việc này giúp xử lý triệt để {TEN_VIET_HOA} và các biến dài
-      requiredFields.forEach(tag => {
-        const lowerTag = tag.toLowerCase().trim();
-        let val = project[lowerTag];
+      // BƯỚC 1: CHUẨN BỊ DỮ LIỆU GỐC
+      const rawData: any = {};
+      Object.keys(project).forEach(key => {
+        let val = project[key];
 
-        // Xử lý các trường hợp đặc biệt bị sai giá trị hoặc thiếu
-        if (lowerTag === 'don_vi_bao_gia_2') val = project.don_vi_bao_gia_2;
-        if (lowerTag === 'thoi_gian_to_chuc_lua_chon_nha_thau') val = project.thoi_gian_to_chuc_lua_chon_nha_thau;
-        if (lowerTag === 'thoi_gian_bat_dau_to_chuc_lua_chon_nha_thau') val = project.thoi_gian_bat_dau_to_chuc_lua_chon_nha_thau;
-
-        // A. XỬ LÝ NGÀY THÁNG
-        if (lowerTag.startsWith('ngay_') && val) {
+        // Xử lý ngày tháng
+        if (key.startsWith('ngay_') && val) {
           const date = new Date(val);
           if (!isNaN(date.getTime())) {
             const d = String(date.getDate()).padStart(2, '0');
             const m = String(date.getMonth() + 1).padStart(2, '0');
-            const y = date.getFullYear();
-            val = `${d}/${m}/${y}`;
+            val = `${d}/${m}/${date.getFullYear()}`;
           }
         } 
-        // B. XỬ LÝ SỐ TIỀN
-        else if ((lowerTag.includes('gia_') || lowerTag.includes('tien_') || lowerTag.includes('du_toan_')) && 
-                 !lowerTag.includes('bang_chu_') && val !== null && val !== "") {
+        // Xử lý số tiền
+        else if ((key.includes('gia_') || key.includes('tien_') || key.includes('du_toan_')) && 
+                 !key.includes('bang_chu_') && val !== null && val !== "") {
           val = formatMoney(val);
         }
+        rawData[key] = val ?? "";
+      });
 
-        // C. XỬ LÝ VIẾT HOA THEO YÊU CẦU
-        // Nếu tag trong Word là HOA TOÀN BỘ -> Xuất giá trị HOA
-        if (tag === tag.toUpperCase() && typeof val === 'string') {
-          dataToRender[tag] = val.toUpperCase();
+      // BƯỚC 2: MAPPING DỮ LIỆU VÀO CÁC BIẾN TRONG WORD (THƯỜNG & HOA)
+      const dataToRender: any = {};
+      
+      // Duyệt qua tất cả các tag tìm thấy trong file Word
+      requiredFields.forEach(tag => {
+        const lowerTag = tag.toLowerCase().trim();
+        let finalValue = rawData[lowerTag];
+
+        // XỬ LÝ ĐẶC BIỆT CHO CÁC BIẾN HAY LỖI (Ép giá trị trực tiếp từ project)
+        if (lowerTag === 'don_vi_bao_gia_2') finalValue = project.don_vi_bao_gia_2;
+        if (lowerTag === 'ten_du_an_du_toan_mua_sam') finalValue = project.ten_du_an_du_toan_mua_sam;
+        if (lowerTag === 'don_vi_bao_gia_1') finalValue = project.don_vi_bao_gia_1;
+        if (lowerTag === 'don_vi_bao_gia_3') finalValue = project.don_vi_bao_gia_3;
+        if (lowerTag === 'thoi_gian_to_chuc_lua_chon_nha_thau') finalValue = project.thoi_gian_to_chuc_lua_chon_nha_thau;
+        if (lowerTag === 'thoi_gian_bat_dau_to_chuc_lua_chon_nha_thau') finalValue = project.thoi_gian_bat_dau_to_chuc_lua_chon_nha_thau;
+
+        // XỬ LÝ VIẾT HOA
+        if (tag === tag.toUpperCase() && typeof finalValue === 'string') {
+          dataToRender[tag] = finalValue.toUpperCase();
         } else {
-          dataToRender[tag] = val ?? "";
+          dataToRender[tag] = finalValue;
         }
       });
 
-      // Bước 2: Xử lý dữ liệu bảng (Giữ nguyên logic bang_quy_mo và bang_hop_dong của Bản)
+      // BƯỚC 3: XỬ LÝ DỮ LIỆU BẢNG (Giữ nguyên)
       const dynamicTableFields = ['bang_quy_mo', 'bang_hop_dong'];
       dynamicTableFields.forEach(field => {
         const rawValue = project[field];
@@ -211,10 +219,16 @@ export default function SoanHoSoPage({ params }: { params: Promise<{ id: string 
         type: "blob",
         mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });
-      saveAs(out, `${selectedTemplate.name}_Export.docx`);
+      
+      // GIỮ LẠI TÊN DỰ ÁN CHO TÊN FILE XUẤT RA
+      const fileNameSuffix = project.ten_du_an_du_toan_mua_sam 
+        ? project.ten_du_an_du_toan_mua_sam.substring(0, 50) 
+        : 'HoSo';
+      saveAs(out, `${selectedTemplate.name}_${fileNameSuffix}.docx`);
+
     } catch (error) {
-      console.error("Lỗi:", error);
-      alert("Lỗi xuất file! Kiểm tra lại các biến dài trong Word.");
+      console.error("Lỗi xuất Word:", error);
+      alert("Lỗi xuất file! Hãy kiểm tra lại các biến trong file Word.");
     }
   };
 
