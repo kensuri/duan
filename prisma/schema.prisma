@@ -9,9 +9,8 @@ datasource db {
 
 model Template {
   id        String   @id @default(cuid())
-  name      String
-  fileName  String
-  filePath  String
+  name      String   // Tên hiển thị
+  url       String   // Link Vercel Blob
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

@@ -1,87 +1,86 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { prisma } from '@/lib/prisma';
+import { put, del } from '@vercel/blob';
 
-const templatesDirectory = path.join(process.cwd(), 'public/templates');
-
-// Đảm bảo thư mục tồn tại khi khởi chạy
-if (!fs.existsSync(templatesDirectory)) {
-  fs.mkdirSync(templatesDirectory, { recursive: true });
-}
-
-// 1. GET: Lấy danh sách file
+// 1. LẤY DANH SÁCH (GET)
 export async function GET() {
   try {
-    const fileNames = fs.readdirSync(templatesDirectory);
-    const templates = fileNames
-      .filter(file => file.endsWith('.docx'))
-      .map(file => ({
-        id: file, // Dùng tên file làm ID tạm thời
-        file: file,
-        name: file.replace('.docx', '').replace(/_/g, ' ').toUpperCase()
-      }));
-    return NextResponse.json(templates);
+    const data = await prisma.template.findMany({ orderBy: { createdAt: 'desc' } });
+    return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json([]);
+    return NextResponse.json([], { status: 500 });
   }
 }
 
-// 2. POST: Upload file mới
+// 2. UPLOAD FILE (POST) - CHẠY TRÊN SERVER ĐỂ TRÁNH CORS
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get('file') as File;
 
-    if (!file) {
-      return NextResponse.json({ error: "Không tìm thấy file" }, { status: 400 });
-    }
+    if (!file) return NextResponse.json({ error: "Thiếu file" }, { status: 400 });
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const safeName = file.name.replace(/\s+/g, '_'); // Thay khoảng trắng bằng gạch dưới
-    const filePath = path.join(templatesDirectory, safeName);
+    // Đẩy trực tiếp từ Server lên Cloud
+    const blob = await put(file.name, file, {
+      access: 'public',
+      token: process.env.BLOB_READ_WRITE_TOKEN 
+    });
 
-    fs.writeFileSync(filePath, buffer);
+    // Lưu link vào Database
+    const newTemplate = await prisma.template.create({
+      data: {
+        name: file.name.replace('.docx', ''),
+        url: blob.url,
+      }
+    });
 
-    return NextResponse.json({ message: "Tải lên thành công", fileName: safeName });
+    return NextResponse.json(newTemplate);
   } catch (error) {
-    return NextResponse.json({ error: "Lỗi tải file" }, { status: 500 });
+    console.error("Lỗi Server:", error);
+    return NextResponse.json({ error: "Lỗi xử lý upload" }, { status: 500 });
   }
 }
 
-// 3. PATCH: Đổi tên file
-export async function PATCH(req: Request) {
-  try {
-    const { oldName, newName } = await req.json();
-    const oldPath = path.join(templatesDirectory, oldName);
-    // Đảm bảo đuôi file luôn là .docx
-    const formattedNewName = newName.trim().replace(/\.docx$/i, '') + '.docx';
-    const newPath = path.join(templatesDirectory, formattedNewName);
-
-    if (fs.existsSync(oldPath)) {
-      fs.renameSync(oldPath, newPath);
-      return NextResponse.json({ message: "Đổi tên thành công" });
-    }
-    return NextResponse.json({ error: "Không tìm thấy file cũ" }, { status: 404 });
-  } catch (error) {
-    return NextResponse.json({ error: "Lỗi đổi tên" }, { status: 500 });
-  }
-}
-
-// 4. DELETE: Xóa file
+// 3. XÓA FILE (DELETE)
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const fileName = searchParams.get('fileName');
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: "Thiếu ID" }, { status: 400 });
 
-    if (!fileName) return NextResponse.json({ error: "Thiếu tên file" }, { status: 400 });
-
-    const filePath = path.join(templatesDirectory, fileName);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      return NextResponse.json({ message: "Xóa file thành công" });
+    const item = await prisma.template.findUnique({ where: { id } });
+    if (item?.url) {
+      await del(item.url); // Xóa file trên Cloud
     }
-    return NextResponse.json({ error: "File không tồn tại" }, { status: 404 });
+    await prisma.template.delete({ where: { id } });
+
+    return NextResponse.json({ message: "Đã xóa" });
   } catch (error) {
-    return NextResponse.json({ error: "Lỗi khi xóa" }, { status: 500 });
+    return NextResponse.json({ error: "Lỗi xóa" }, { status: 500 });
+  }
+}
+
+// 4. ĐỔI TÊN BIỂU MẪU (PATCH)
+export async function PATCH(req: Request) {
+  try {
+    const { id, newName } = await req.json();
+
+    if (!id || !newName) {
+      return NextResponse.json({ error: "Thiếu ID hoặc tên mới" }, { status: 400 });
+    }
+
+    // Cập nhật tên hiển thị trong Database Neon
+    const updated = await prisma.template.update({
+      where: { id: id },
+      data: { 
+        // Loại bỏ đuôi .docx nếu người dùng lỡ nhập vào để tên hiển thị đẹp hơn
+        name: newName.trim().replace(/\.docx$/i, '') 
+      }
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("Lỗi đổi tên:", error);
+    return NextResponse.json({ error: "Không thể đổi tên trong hệ thống" }, { status: 500 });
   }
 }

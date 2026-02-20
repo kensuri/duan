@@ -82,25 +82,35 @@ export default function SoanHoSoPage({ params }: { params: Promise<{ id: string 
   const inspectTemplate = async (template: any) => {
     setScanning(true);
     setSelectedTemplate(template);
+    setRequiredFields([]); // Reset danh sách trường cũ
+    
     try {
-      const response = await fetch(`/templates/${template.file}`);
+      // FIX TẠI ĐÂY: Sử dụng template.url (link Vercel Blob) thay vì template.file
+      const fileUrl = template.url || `/templates/${template.file}`;
+      const response = await fetch(fileUrl);
+      
+      if (!response.ok) throw new Error("Không thể tải file từ Cloud");
+      
       const arrayBuffer = await response.arrayBuffer();
       const zip = new PizZip(arrayBuffer);
       const content = zip.files["word/document.xml"].asText();
+      
+      // Logic tìm biến {bien_so_1} trong file Word
       const regex = /\{(.+?)\}/g;
       let match;
       const fields = new Set<string>();
-      const blackList = ['id', 'ID', 'createdAt', 'updatedAt', 'createdat', 'updatedat', 'content', 'trang_thai'];
+      const blackList = ['id', 'ID', 'createdAt', 'updatedAt', 'content', 'trang_thai', 'url'];
 
       while ((match = regex.exec(content)) !== null) {
         let name = match[1].replace(/<[^>]+>/g, "").trim().replace(/[#/]/g, "");
-        if (name && !blackList.includes(name) && name.length < 35 && !name.includes(':') && !name.includes('-') && !/^[0-9a-fA-F-]+$/.test(name)) {
+        if (name && !blackList.includes(name) && name.length < 35 && !name.includes(':')) {
           fields.add(name);
         }
       }
       setRequiredFields(Array.from(fields));
     } catch (e) {
-      console.error("Lỗi phân tích template");
+      console.error("Lỗi phân tích template:", e);
+      alert("Không thể đọc nội dung file mẫu này. Hãy kiểm tra lại file Word.");
     } finally {
       setScanning(false);
     }
@@ -126,7 +136,9 @@ export default function SoanHoSoPage({ params }: { params: Promise<{ id: string 
   const handleExportWord = async () => {
     if (!selectedTemplate || !project) return;
     try {
-      const response = await fetch(`/templates/${selectedTemplate.file}`);
+      // const response = await fetch(`/templates/${selectedTemplate.file}`);
+      const fileUrl = selectedTemplate.url || `/templates/${selectedTemplate.file}`;
+      const response = await fetch(fileUrl);
       const arrayBuffer = await response.arrayBuffer();
       const zip = new PizZip(arrayBuffer);
       
