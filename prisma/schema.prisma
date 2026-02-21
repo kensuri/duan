@@ -58,8 +58,8 @@ model dulieuduan {
   nam_tai_chinh                               String?
   hinh_thuc_lua_chon_nha_thau                 String?
   phuong_thuc_lua_chon_nha_thau               String?
-  thoi_gian_to_chuc_lua_chon_nha_thau         String?
-  thoi_gian_bat_dau_to_chuc_lua_chon_nha_thau String?
+  tg_to_chuc_lcnt                             String?
+  tg_bd_to_chuc_lcnt                          String?
   loai_hop_dong                               String?
   thoi_gian_thuc_hien_goi_thau                String?
   tuy_chon_mua_them                           String?
